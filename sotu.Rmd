@@ -6,25 +6,38 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(tidytext)
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+```{r process, warning=FALSE, message=FALSE}
+sou <- read_csv("data/sou.csv")
+presidents <- read_csv("data/presidents.csv")
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+sou <- sou %>%
+  left_join(presidents)
 ```
 
-## Including Plots
+```{r}
+tidy_sou <- sou %>%
+  unnest_tokens(word, text)
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+tidy_sou %>% 
+  inner_join(get_sentiments("afinn"), by = "word") %>% 
+  filter(party %in% c("Democratic", "Republican")) %>% 
+  group_by(party, date) %>% 
+  summarize(rating = mean(score)) %>% 
+  ggplot(aes(x = date, y = rating, color = party)) + geom_point() + geom_smooth(method = "loess") +
+  xlab("Date") +
+  ylab("Average Sentiment Score using AFINN Dictionary") +
+  ggtitle("State of the Union Sentiment Scores")
+
+```
+
+
+
